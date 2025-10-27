@@ -35,8 +35,18 @@ const Register = () => {
 
     // Demo registration - in production, this would call registration API
     if (formData.name && formData.email && formData.password && formData.phone) {
-      toast.success("Registration successful! Please check your email.");
-      navigate("/login");
+      toast.success("Registration successful!");
+      
+      // Redirect based on role
+      if (role === "doctor") {
+        navigate("/doctor-portal");
+      } else if (role === "receptionist") {
+        navigate("/receptionist-portal");
+      } else if (role === "patient") {
+        navigate("/patient-dashboard");
+      } else {
+        navigate("/login");
+      }
     } else {
       toast.error("Please fill in all required fields");
     }
