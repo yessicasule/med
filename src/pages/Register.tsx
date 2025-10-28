@@ -43,7 +43,7 @@ const Register = () => {
       } else if (role === "receptionist") {
         navigate("/receptionist-portal");
       } else if (role === "patient") {
-        navigate("/patient-dashboard");
+        navigate("/patient/dashboard");
       } else {
         navigate("/login");
       }

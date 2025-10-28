@@ -181,9 +181,11 @@ const PatientDashboard = () => {
                             </span>
                             <span>{doctor.experience} experience</span>
                           </div>
-                          <Button size="sm" className="mt-3">
-                            Book Appointment
-                          </Button>
+                          <Link to="/patient/book-appointment">
+                            <Button size="sm" className="mt-3">
+                              Book Appointment
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -236,6 +238,12 @@ const PatientDashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <Link to="/patient/book-appointment">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Book Appointment
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full justify-start">
                   <FileText className="mr-2 h-4 w-4" />
                   View Medical Records
