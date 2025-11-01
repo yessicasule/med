@@ -1,4 +1,6 @@
 import { User, RegisterData, LoginData, AuthResponse } from '@/types';
+import { userDB, doctorDB } from '@/db';
+import { PatientFlowService } from '@/services/flowService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -8,82 +10,125 @@ const USER_KEY = 'med_user_data';
 
 // User Management API
 export const authApi = {
-  // Register user (patient/doctor)
+  // Register user (patient/doctor) - Uses Patient Flow
   async register(data: RegisterData): Promise<AuthResponse> {
-    // In production, this would call: POST /api/auth/register
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }).catch(() => {
-      // Demo fallback - return mock data
-      return {
-        ok: true,
-        json: async () => ({
-          user: {
-            id: Date.now().toString(),
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            role: data.role,
-            specialty: data.specialty,
-            verified: data.role === 'doctor' ? false : true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          token: `mock_token_${Date.now()}`,
-        }),
-      } as Response;
-    });
+    // Try backend first
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Registration failed' }));
-      throw new Error(error.message || 'Registration failed');
+      if (response.ok) {
+        const result: AuthResponse = await response.json();
+        localStorage.setItem(TOKEN_KEY, result.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+        return result;
+      }
+    } catch (error) {
+      // Fall through to local database
     }
 
-    const result: AuthResponse = await response.json();
-    // Store token and user data
-    localStorage.setItem(TOKEN_KEY, result.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-    return result;
+    // Use local database via Patient Flow
+    try {
+      const user = await PatientFlowService.registerAndLogin(data.email, data.password, {
+        name: data.name,
+        phone: data.phone,
+        role: data.role,
+        specialty: data.specialty,
+      });
+
+      if (!user) {
+        throw new Error('Registration failed');
+      }
+
+      // Create doctor entry if role is doctor
+      if (data.role === 'doctor') {
+        doctorDB.create({
+          id: `DOC-${Date.now()}`,
+          userId: user.id,
+          specialty: data.specialty || 'General',
+          location: '',
+          experience: '',
+          rating: 0,
+          available: true,
+          verificationStatus: 'pending',
+          availabilitySlots: [],
+        });
+      }
+
+      const userResponse: User = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        specialty: user.specialty,
+        verified: user.verified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+
+      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(userResponse));
+
+      return {
+        user: userResponse,
+        token,
+      };
+    } catch (error: any) {
+      throw new Error(error.message || 'Registration failed');
+    }
   },
 
   // Login and authentication
   async login(data: LoginData): Promise<AuthResponse> {
-    // In production, this would call: POST /api/auth/login
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }).catch(() => {
-      // Demo fallback
-      return {
-        ok: true,
-        json: async () => ({
-          user: {
-            id: '1',
-            name: 'Demo User',
-            email: data.email,
-            phone: '+1234567890',
-            role: 'patient',
-            verified: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          token: `mock_token_${Date.now()}`,
-        }),
-      } as Response;
-    });
+    // Try backend first
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Login failed' }));
-      throw new Error(error.message || 'Login failed');
+      if (response.ok) {
+        const result: AuthResponse = await response.json();
+        localStorage.setItem(TOKEN_KEY, result.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+        return result;
+      }
+    } catch (error) {
+      // Fall through to local database
     }
 
-    const result: AuthResponse = await response.json();
-    localStorage.setItem(TOKEN_KEY, result.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-    return result;
+    // Use local database
+    const user = userDB.verifyCredentials(data.email, data.password);
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+
+    const userResponse: User = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      specialty: user.specialty,
+      verified: user.verified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(userResponse));
+
+    return {
+      user: userResponse,
+      token,
+    };
   },
 
   // Get current user
@@ -113,38 +158,55 @@ export const authApi = {
     return !!localStorage.getItem(TOKEN_KEY);
   },
 
-  // Doctor verification (admin or AI-based)
+  // Doctor verification (admin or AI-based) - Uses Administrator Flow
   async verifyDoctor(doctorId: string, verified: boolean): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/auth/verify-doctor/${doctorId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.getToken()}`,
-      },
-      body: JSON.stringify({ verified }),
-    }).catch(() => {
-      // Demo fallback
-      return {
-        ok: true,
-        json: async () => ({
-          id: doctorId,
-          name: 'Dr. Verified',
-          email: 'doctor@example.com',
-          phone: '+1234567890',
-          role: 'doctor',
-          verified,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
-      } as Response;
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-doctor/${doctorId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        body: JSON.stringify({ verified }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Verification failed' }));
-      throw new Error(error.message || 'Verification failed');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      // Fall through to local database
     }
 
-    return await response.json();
+    // Use local database via Administrator Flow
+    const { AdministratorFlowService } = await import('@/services/flowService');
+    const adminUser = this.getCurrentUser();
+    if (!adminUser || adminUser.role !== 'admin') {
+      throw new Error('Unauthorized: Admin access required');
+    }
+
+    const doctor = doctorDB.getById(doctorId);
+    if (!doctor) {
+      throw new Error('Doctor not found');
+    }
+
+    await AdministratorFlowService.verifyDoctor(adminUser.id, doctorId, verified);
+
+    const user = userDB.getById(doctor.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      specialty: user.specialty,
+      verified: user.verified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
   },
 
   // Get all users (for admin)

@@ -1,5 +1,7 @@
 import { Invoice, PaymentData, BillingSummary } from '@/types';
 import { authApi } from './auth';
+import { billingDB } from '@/db';
+import { PatientFlowService, ReceptionistFlowService } from '@/services/flowService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -127,39 +129,43 @@ export const billingApi = {
     return await response.json();
   },
 
-  // Process payment (online and offline)
+  // Process payment (online and offline) - Uses Patient Flow
   async processPayment(data: PaymentData): Promise<Invoice> {
-    const response = await fetch(`${API_BASE_URL}/billing/payments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authApi.getToken()}`,
-      },
-      body: JSON.stringify(data),
-    }).catch(() => {
-      // Demo fallback
-      return {
-        ok: true,
-        json: async () => ({
-          id: data.invoiceId,
-          patientId: authApi.getCurrentUser()?.id || '1',
-          amount: data.amount,
-          status: 'paid',
-          dueDate: new Date().toISOString().split('T')[0],
-          paidDate: new Date().toISOString().split('T')[0],
-          paymentMethod: data.paymentMethod,
-          items: [],
-          createdAt: new Date().toISOString(),
-        }),
-      } as Response;
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/billing/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authApi.getToken()}`,
+        },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Payment failed' }));
-      throw new Error(error.message || 'Payment failed');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      // Fall through to local database
     }
 
-    return await response.json();
+    // Use local database via Patient Flow
+    const invoice = await PatientFlowService.payBill(data.invoiceId, data.paymentMethod, data.transactionId);
+    if (!invoice) {
+      throw new Error('Payment failed');
+    }
+
+    return {
+      id: invoice.id,
+      patientId: invoice.patientId,
+      appointmentId: invoice.appointmentId,
+      amount: invoice.amount,
+      status: invoice.status as Invoice['status'],
+      dueDate: invoice.dueDate,
+      paidDate: invoice.paidDate,
+      paymentMethod: invoice.paymentMethod,
+      items: invoice.items,
+      createdAt: invoice.createdAt,
+    };
   },
 
   // Get billing summary
