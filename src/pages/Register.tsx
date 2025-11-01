@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,11 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { UserRole } from "@/types";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const [role, setRole] = useState(searchParams.get("role") || "patient");
+  const { register } = useAuth();
+  const [role, setRole] = useState<UserRole>((searchParams.get("role") as UserRole) || "patient");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -33,20 +35,15 @@ const Register = () => {
       return;
     }
 
-    // Demo registration - in production, this would call registration API
     if (formData.name && formData.email && formData.password && formData.phone) {
-      toast.success("Registration successful!");
-      
-      // Redirect based on role
-      if (role === "doctor") {
-        navigate("/doctor-portal");
-      } else if (role === "receptionist") {
-        navigate("/receptionist-portal");
-      } else if (role === "patient") {
-        navigate("/patient-dashboard");
-      } else {
-        navigate("/login");
-      }
+      register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        role: role,
+        specialty: role === "doctor" ? formData.specialty : undefined,
+      });
     } else {
       toast.error("Please fill in all required fields");
     }
@@ -72,7 +69,7 @@ const Register = () => {
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-3">
                 <Label>I am a</Label>
-                <RadioGroup value={role} onValueChange={setRole} className="flex gap-4">
+                <RadioGroup value={role} onValueChange={(value) => setRole(value as UserRole)} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="patient" id="patient" />
                     <Label htmlFor="patient" className="cursor-pointer">Patient</Label>
