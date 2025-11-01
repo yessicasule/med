@@ -17,7 +17,7 @@ const PatientDashboard = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const { currentUser, logout } = useAuth();
-  const { appointmentHistory, searchDoctors, doctors } = useAppointments();
+  const { appointmentHistory, searchDoctors, doctors, isLoadingHistory } = useAppointments();
   const { billingSummary } = useBilling();
   const { records } = useMedicalRecords();
 
@@ -182,7 +182,12 @@ const PatientDashboard = () => {
                 <CardTitle>Upcoming Appointments</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {upcomingAppointments.map((appointment) => (
+                {isLoadingHistory ? (
+                  <div className="text-center py-4 text-muted-foreground">Loading...</div>
+                ) : upcomingAppointments.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">No upcoming appointments</div>
+                ) : (
+                  upcomingAppointments.map((appointment) => (
                   <div key={appointment.id} className="border rounded-lg p-4 bg-muted/30">
                     <div className="flex items-start gap-3">
                       <Avatar className="h-12 w-12">
@@ -204,7 +209,8 @@ const PatientDashboard = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
                 <Button variant="outline" className="w-full" onClick={() => navigate('/appointments/history')}>
                   View All
                 </Button>
@@ -228,6 +234,10 @@ const PatientDashboard = () => {
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/appointments/history')}>
                   <Calendar className="mr-2 h-4 w-4" />
                   Appointment History
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/find-doctors')}>
+                  <Search className="mr-2 h-4 w-4" />
+                  Find Doctors
                 </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/book-appointment')}>
                   <Calendar className="mr-2 h-4 w-4" />

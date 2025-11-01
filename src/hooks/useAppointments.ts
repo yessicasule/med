@@ -27,8 +27,12 @@ export const useAppointments = () => {
   const bookAppointment = useMutation({
     mutationFn: (data: BookAppointmentData) => appointmentsApi.bookAppointment(data),
     onSuccess: () => {
+      // Invalidate all appointment-related queries to sync across all portals
       queryClient.invalidateQueries({ queryKey: ['appointmentHistory'] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+      queryClient.invalidateQueries({ queryKey: ['todayAppointments'] });
+      queryClient.invalidateQueries({ queryKey: ['allAppointments'] });
       toast.success('Appointment booked successfully!');
     },
     onError: (error: Error) => {
@@ -39,8 +43,12 @@ export const useAppointments = () => {
   const cancelAppointment = useMutation({
     mutationFn: (appointmentId: string) => appointmentsApi.cancelAppointment(appointmentId),
     onSuccess: () => {
+      // Invalidate all appointment-related queries to sync across all portals
       queryClient.invalidateQueries({ queryKey: ['appointmentHistory'] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorAppointments'] });
+      queryClient.invalidateQueries({ queryKey: ['todayAppointments'] });
+      queryClient.invalidateQueries({ queryKey: ['allAppointments'] });
       toast.success('Appointment cancelled successfully');
     },
     onError: (error: Error) => {

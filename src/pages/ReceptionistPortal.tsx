@@ -5,37 +5,74 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, DollarSign, FileText, Download, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
+import { useAllAppointments } from "@/hooks/useAllAppointments";
+import { useBilling } from "@/hooks/useBilling";
+import { format } from "date-fns";
+import { userDB } from "@/db";
 
 const ReceptionistPortal = () => {
+  const { appointments, isLoading } = useAllAppointments();
+  const { invoices } = useBilling();
+  
+  // Calculate stats from real data
+  const today = new Date().toISOString().split('T')[0];
+  const todayAppointments = appointments.filter(apt => apt.date === today);
+  const uniquePatients = new Set(appointments.map(apt => apt.patientId)).size;
+  const totalRevenue = invoices.filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + inv.amount, 0);
+  const pendingBills = invoices.filter(inv => inv.status === 'pending').length;
+  const overdueBills = invoices.filter(inv => inv.status === 'overdue').length;
+
   const stats = [
-    { title: "Total Appointments", value: "156", icon: Calendar, change: "+12% from last month" },
-    { title: "Active Patients", value: "89", icon: Users, change: "+8 new this week" },
-    { title: "Total Revenue", value: "$24,580", icon: DollarSign, change: "+18% from last month" },
-    { title: "Pending Bills", value: "23", icon: FileText, change: "5 overdue" },
+    { title: "Total Appointments", value: appointments.length.toString(), icon: Calendar, change: `${todayAppointments.length} today` },
+    { title: "Active Patients", value: uniquePatients.toString(), icon: Users, change: `${todayAppointments.length} appointments today` },
+    { title: "Total Revenue", value: `$${totalRevenue.toFixed(0)}`, icon: DollarSign, change: `${invoices.filter(inv => inv.status === 'paid').length} paid invoices` },
+    { title: "Pending Bills", value: pendingBills.toString(), icon: FileText, change: `${overdueBills} overdue` },
   ];
 
-  const doctorAppointments = [
-    { id: "APT001", doctor: "Dr. Sarah Johnson", specialty: "Cardiology", time: "09:00 AM", patient: "John Doe", status: "Confirmed" },
-    { id: "APT002", doctor: "Dr. Michael Chen", specialty: "Neurology", time: "10:30 AM", patient: "Emma Wilson", status: "Confirmed" },
-    { id: "APT003", doctor: "Dr. Sarah Johnson", specialty: "Cardiology", time: "11:00 AM", patient: "Robert Smith", status: "Pending" },
-    { id: "APT004", doctor: "Dr. Emily Davis", specialty: "Pediatrics", time: "02:00 PM", patient: "Lisa Anderson", status: "Confirmed" },
-    { id: "APT005", doctor: "Dr. Michael Chen", specialty: "Neurology", time: "03:30 PM", patient: "James Brown", status: "Completed" },
-  ];
+  // Get today's appointments for the table
+  const doctorAppointments = todayAppointments
+    .filter(apt => apt.status === 'scheduled' || apt.status === 'in-progress')
+    .map(apt => ({
+      id: apt.id.substring(0, 8),
+      doctor: apt.doctorName,
+      specialty: apt.doctorSpecialty,
+      time: apt.time,
+      patient: apt.patientName,
+      status: apt.status === 'scheduled' ? 'Confirmed' : apt.status === 'in-progress' ? 'In Progress' : 'Completed',
+    }));
 
-  const patientAppointments = [
-    { id: "PAT001", patient: "John Doe", age: 45, contact: "+1 234-567-8901", lastVisit: "2024-10-15", nextAppointment: "2024-10-27", doctor: "Dr. Sarah Johnson" },
-    { id: "PAT002", patient: "Emma Wilson", age: 32, contact: "+1 234-567-8902", lastVisit: "2024-10-20", nextAppointment: "2024-10-27", doctor: "Dr. Michael Chen" },
-    { id: "PAT003", patient: "Robert Smith", age: 58, contact: "+1 234-567-8903", lastVisit: "2024-10-18", nextAppointment: "2024-10-27", doctor: "Dr. Sarah Johnson" },
-    { id: "PAT004", patient: "Lisa Anderson", age: 28, contact: "+1 234-567-8904", lastVisit: "2024-10-22", nextAppointment: "2024-10-27", doctor: "Dr. Emily Davis" },
-  ];
+  // Get unique patients with their info
+  const patientAppointments = Array.from(new Set(appointments.map(apt => apt.patientId)))
+    .slice(0, 4)
+    .map(patientId => {
+      const patient = userDB.getById(patientId);
+      const patientApts = appointments.filter(apt => apt.patientId === patientId);
+      const lastAppt = patientApts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      const nextAppt = patientApts.filter(apt => apt.status === 'scheduled')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+      
+      return {
+        id: patientId.substring(0, 8),
+        patient: patient?.name || 'Unknown',
+        age: 'N/A',
+        contact: patient?.phone || 'N/A',
+        lastVisit: lastAppt?.date || 'N/A',
+        nextAppointment: nextAppt?.date || 'N/A',
+        doctor: nextAppt?.doctorName || lastAppt?.doctorName || 'N/A',
+      };
+    });
 
-  const billingRecords = [
-    { id: "INV001", patient: "John Doe", doctor: "Dr. Sarah Johnson", service: "Consultation", amount: "$150", status: "Paid", date: "2024-10-15" },
-    { id: "INV002", patient: "Emma Wilson", doctor: "Dr. Michael Chen", service: "MRI Scan", amount: "$800", status: "Paid", date: "2024-10-20" },
-    { id: "INV003", patient: "Robert Smith", doctor: "Dr. Sarah Johnson", service: "ECG Test", amount: "$200", status: "Pending", date: "2024-10-18" },
-    { id: "INV004", patient: "Lisa Anderson", doctor: "Dr. Emily Davis", service: "Vaccination", amount: "$80", status: "Paid", date: "2024-10-22" },
-    { id: "INV005", patient: "James Brown", doctor: "Dr. Michael Chen", service: "Follow-up", amount: "$120", status: "Overdue", date: "2024-10-10" },
-  ];
+  // Get billing records
+  const billingRecords = invoices.slice(0, 5).map(inv => ({
+    id: inv.id.substring(0, 8),
+    patient: userDB.getById(inv.patientId)?.name || 'Unknown',
+    doctor: 'Dr. Unknown',
+    service: inv.items[0]?.description || 'Consultation',
+    amount: `$${inv.amount.toFixed(2)}`,
+    status: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : 'Pending',
+    date: format(new Date(inv.createdAt), 'yyyy-MM-dd'),
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -115,18 +152,32 @@ const ReceptionistPortal = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {doctorAppointments.map((appointment) => (
-                  <TableRow key={appointment.id} className="border-mint-green/20 hover:bg-mint-green/10">
-                    <TableCell className="font-medium text-indigo-dye">{appointment.id}</TableCell>
-                    <TableCell className="text-indigo-dye">{appointment.doctor}</TableCell>
-                    <TableCell className="text-indigo-dye/80">{appointment.specialty}</TableCell>
-                    <TableCell className="text-indigo-dye">{appointment.time}</TableCell>
-                    <TableCell className="text-indigo-dye">{appointment.patient}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(appointment.status)}>{appointment.status}</Badge>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-indigo-dye">
+                      Loading appointments...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : doctorAppointments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-indigo-dye/70">
+                      No appointments scheduled for today
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  doctorAppointments.map((appointment) => (
+                    <TableRow key={appointment.id} className="border-mint-green/20 hover:bg-mint-green/10">
+                      <TableCell className="font-medium text-indigo-dye">{appointment.id}</TableCell>
+                      <TableCell className="text-indigo-dye">{appointment.doctor}</TableCell>
+                      <TableCell className="text-indigo-dye/80">{appointment.specialty}</TableCell>
+                      <TableCell className="text-indigo-dye">{appointment.time}</TableCell>
+                      <TableCell className="text-indigo-dye">{appointment.patient}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(appointment.status)}>{appointment.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

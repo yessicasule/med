@@ -10,6 +10,7 @@ import PatientDashboard from "./pages/PatientDashboard";
 import DoctorPortal from "./pages/DoctorPortal";
 import ReceptionistPortal from "./pages/ReceptionistPortal";
 import BookAppointment from "./pages/BookAppointment";
+import FindDoctors from "./pages/FindDoctors";
 import AppointmentHistory from "./pages/AppointmentHistory";
 import Billing from "./pages/Billing";
 import MedicalRecords from "./pages/MedicalRecords";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/patient/dashboard" element={<PatientDashboard />} />
+          <Route path="/find-doctors" element={<FindDoctors />} />
           <Route path="/book-appointment" element={<BookAppointment />} />
           <Route path="/appointments/history" element={<AppointmentHistory />} />
           <Route path="/billing" element={<Billing />} />

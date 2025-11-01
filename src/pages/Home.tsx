@@ -26,7 +26,7 @@ const Home = () => {
                     Get Started
                   </Button>
                 </Link>
-                <Link to="/doctors">
+                <Link to="/find-doctors">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 text-white border-white/20 hover:bg-white/20">
                     Find Doctors
                   </Button>
@@ -181,7 +181,7 @@ const Home = () => {
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm text-primary-foreground/80">
                 <li><Link to="/" className="hover:text-secondary transition-colors">Home</Link></li>
-                <li><Link to="/doctors" className="hover:text-secondary transition-colors">Find Doctors</Link></li>
+                <li><Link to="/find-doctors" className="hover:text-secondary transition-colors">Find Doctors</Link></li>
                 <li><Link to="/about" className="hover:text-secondary transition-colors">About Us</Link></li>
               </ul>
             </div>

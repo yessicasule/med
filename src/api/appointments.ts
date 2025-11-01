@@ -2,6 +2,7 @@ import { Doctor, Appointment, AppointmentSearchFilters, BookAppointmentData, Tim
 import { authApi } from './auth';
 import { doctorDB, appointmentDB, userDB } from '@/db';
 import { PatientFlowService } from '@/services/flowService';
+import { notificationDB } from '@/db';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -124,6 +125,19 @@ export const appointmentsApi = {
     const doctor = doctorDB.getById(data.doctorId);
     const doctorUser = doctor ? userDB.getById(doctor.userId) : null;
 
+    // Send notification to doctor about new appointment
+    if (doctor?.userId) {
+      notificationDB.send(
+        doctor.userId,
+        'appointment',
+        'in-app',
+        'New Appointment Scheduled',
+        `You have a new appointment scheduled with ${currentUser.name} on ${data.date} at ${data.timeSlotId}`,
+        'system',
+        '/doctor-portal'
+      );
+    }
+
     return {
       id: appointment.id,
       patientId: appointment.patientId,
@@ -139,20 +153,27 @@ export const appointmentsApi = {
     };
   },
 
-  // Cancel appointment
+  // Cancel appointment - Connected to Appointment DB
   async cancelAppointment(appointmentId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/appointments/${appointmentId}/cancel`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${authApi.getToken()}`,
-      },
-    }).catch(() => {
-      return { ok: true } as Response;
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/${appointmentId}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${authApi.getToken()}`,
+        },
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to cancel appointment' }));
-      throw new Error(error.message || 'Failed to cancel appointment');
+      if (response.ok) {
+        return;
+      }
+    } catch (error) {
+      // Fall through to local database
+    }
+
+    // Use local database
+    const appointment = appointmentDB.cancel(appointmentId);
+    if (!appointment) {
+      throw new Error('Appointment not found');
     }
   },
 
@@ -202,25 +223,45 @@ export const appointmentsApi = {
     });
   },
 
-  // Get appointments by doctor
+  // Get appointments by doctor - Connected to Appointment DB
   async getDoctorAppointments(doctorId: string): Promise<Appointment[]> {
-    const response = await fetch(`${API_BASE_URL}/appointments/doctor/${doctorId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${authApi.getToken()}`,
-      },
-    }).catch(() => {
-      return {
-        ok: true,
-        json: async () => [],
-      } as Response;
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/doctor/${doctorId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authApi.getToken()}`,
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch doctor appointments');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      // Fall through to local database
     }
 
-    return await response.json();
+    // Use local database
+    const appointments = appointmentDB.getByDoctorId(doctorId);
+    
+    return appointments.map(apt => {
+      const doctor = doctorDB.getById(apt.doctorId);
+      const doctorUser = doctor ? userDB.getById(doctor.userId) : null;
+      const patient = userDB.getById(apt.patientId);
+
+      return {
+        id: apt.id,
+        patientId: apt.patientId,
+        doctorId: apt.doctorId,
+        doctorName: doctorUser?.name || 'Dr. Unknown',
+        doctorSpecialty: doctor?.specialty || 'General',
+        date: apt.date,
+        time: apt.time,
+        status: apt.status as Appointment['status'],
+        type: apt.type,
+        notes: apt.notes,
+        createdAt: apt.createdAt,
+      };
+    });
   },
 
   // Get available time slots for a doctor on a specific date

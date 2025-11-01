@@ -66,6 +66,13 @@ const BookAppointment = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Book Appointment</h1>
           <p className="text-muted-foreground">Search and book an appointment with a doctor</p>
+          <Button 
+            variant="link" 
+            className="mt-2 p-0"
+            onClick={() => navigate('/find-doctors')}
+          >
+            Browse doctor specialties →
+          </Button>
         </div>
 
         {!selectedDoctor ? (
@@ -257,8 +264,20 @@ const BookAppointment = () => {
           </Card>
         ) : (
           <Card className="shadow-card">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Search for doctors to get started</p>
+            <CardContent className="pt-6 text-center py-12">
+              <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">Search for doctors to get started</p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/find-doctors')}
+                >
+                  Browse Doctor Specialties
+                </Button>
+                <Button onClick={handleSearch}>
+                  Search Doctors
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
