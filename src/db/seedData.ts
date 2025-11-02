@@ -366,3 +366,4 @@ export const seedExampleData = () => {
   console.log(`   - ${medicalRecordsDB.getAll().length} medical records created`);
 };
 
+

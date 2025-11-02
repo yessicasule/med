@@ -4,33 +4,80 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar, Clock, ArrowLeft, X } from 'lucide-react';
-import { useAppointments } from '@/hooks/useAppointments';
 import Navbar from '@/components/Navbar';
 import { format } from 'date-fns';
 
 const AppointmentHistory = () => {
   const navigate = useNavigate();
-  const { appointmentHistory, isLoadingHistory, cancelAppointment } = useAppointments();
 
+
+  const appointmentHistory = [
+    {
+      id: '1',
+      doctorName: 'Dr. Meera Nair',
+      doctorSpecialty: 'Cardiologist',
+      date: '2025-10-20',
+      time: '09:00 AM',
+      type: 'Check-up',
+      status: 'completed',
+    },
+    {
+      id: '2',
+      doctorName: 'Dr. Rohan Deshmukh',
+      doctorSpecialty: 'Dermatologist',
+      date: '2025-10-23',
+      time: '11:30 AM',
+      type: 'Follow-up',
+      status: 'cancelled',
+    },
+    {
+      id: '3',
+      doctorName: 'Dr. Aisha Shaikh',
+      doctorSpecialty: 'Pediatrician',
+      date: '2025-10-26',
+      time: '03:00 PM',
+      type: 'Consultation',
+      status: 'scheduled',
+    },
+    {
+      id: '4',
+      doctorName: 'Dr. Arjun Rao',
+      doctorSpecialty: 'Orthopedic Surgeon',
+      date: '2025-10-28',
+      time: '05:00 PM',
+      type: 'Emergency',
+      status: 'in-progress',
+    },
+    {
+      id: '5',
+      doctorName: 'Dr. Kavita Menon',
+      doctorSpecialty: 'General Physician',
+      date: '2025-10-30',
+      time: '10:15 AM',
+      type: 'Routine Check-up',
+      status: 'completed',
+    },
+  ];
+
+  // 🟢 Function to render styled status badges
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return <Badge className="bg-green-500 text-white">Completed</Badge>;
       case 'cancelled':
         return <Badge variant="destructive">Cancelled</Badge>;
       case 'in-progress':
-        return <Badge className="bg-blue-500">In Progress</Badge>;
+        return <Badge className="bg-blue-500 text-white">In Progress</Badge>;
       case 'scheduled':
-        return <Badge variant="secondary">Scheduled</Badge>;
+        return <Badge className="bg-moonstone text-white">Scheduled</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
   };
 
+  // ❌ Handle cancel click
   const handleCancel = (appointmentId: string) => {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      cancelAppointment(appointmentId);
-    }
+    alert(`Appointment ${appointmentId} cancelled (mock action).`);
   };
 
   return (
@@ -43,19 +90,17 @@ const AppointmentHistory = () => {
         </Button>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Appointment History</h1>
-          <p className="text-muted-foreground">View and manage your appointment history</p>
+          <h1 className="text-3xl font-bold text-indigo-dark mb-2">Appointment History</h1>
+          <p className="text-muted-foreground">View and manage your previous appointments</p>
         </div>
 
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>All Appointments</CardTitle>
-            <CardDescription>Your complete appointment history</CardDescription>
+            <CardDescription>Your complete appointment record</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoadingHistory ? (
-              <div className="text-center py-8">Loading appointments...</div>
-            ) : appointmentHistory.length === 0 ? (
+            {appointmentHistory.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">No appointments found</p>
                 <Button onClick={() => navigate('/book-appointment')}>Book an Appointment</Button>
