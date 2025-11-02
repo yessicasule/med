@@ -68,7 +68,8 @@ export const useAppointments = () => {
     isLoadingDoctors: searchDoctors.isPending,
     appointmentHistory: appointmentHistory.data || [],
     isLoadingHistory: appointmentHistory.isLoading,
-    bookAppointment: bookAppointment.mutate,
+    bookAppointment: bookAppointment.mutateAsync,
+    isBooking: bookAppointment.isPending,
     cancelAppointment: cancelAppointment.mutate,
     getAvailableSlots: (doctorId: string, date: string) => {
       queryClient.fetchQuery({

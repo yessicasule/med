@@ -57,8 +57,7 @@ export class PatientFlowService {
       type,
     });
 
-    // Mark doctor slot as unavailable
-    doctorDB.bookSlot(doctorId, time);
+    // Note: Slot booking is handled in the API layer since we need slotId, not time
 
     // Send notification
     notificationDB.send(

@@ -114,16 +114,30 @@ export const appointmentsApi = {
       throw new Error('User not authenticated');
     }
 
+    // Get the doctor to find the time from slotId
+    const doctor = doctorDB.getById(data.doctorId);
+    if (!doctor) {
+      throw new Error('Doctor not found');
+    }
+
+    // Find the slot to get the time
+    const slot = doctor.availabilitySlots.find(s => s.id === data.timeSlotId);
+    if (!slot || !slot.available) {
+      throw new Error('Time slot is not available');
+    }
+
     const appointment = await PatientFlowService.bookAppointment(
       currentUser.id,
       data.doctorId,
       data.date,
-      data.timeSlotId,
+      slot.startTime, // Use the actual time string
       data.type
     );
 
-    const doctor = doctorDB.getById(data.doctorId);
-    const doctorUser = doctor ? userDB.getById(doctor.userId) : null;
+    // Mark the slot as unavailable using slotId
+    doctorDB.bookSlot(data.doctorId, data.timeSlotId);
+
+    const doctorUser = userDB.getById(doctor.userId);
 
     // Send notification to doctor about new appointment
     if (doctor?.userId) {

@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import { useAllAppointments } from "@/hooks/useAllAppointments";
 import { useBilling } from "@/hooks/useBilling";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { userDB } from "@/db";
 
 const ReceptionistPortal = () => {
+  const { currentUser } = useAuth();
   const { appointments, isLoading } = useAllAppointments();
   const { invoices } = useBilling();
   
@@ -45,7 +47,7 @@ const ReceptionistPortal = () => {
   // Get unique patients with their info
   const patientAppointments = Array.from(new Set(appointments.map(apt => apt.patientId)))
     .slice(0, 4)
-    .map(patientId => {
+    .map((patientId: string) => {
       const patient = userDB.getById(patientId);
       const patientApts = appointments.filter(apt => apt.patientId === patientId);
       const lastAppt = patientApts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -211,17 +213,31 @@ const ReceptionistPortal = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {patientAppointments.map((patient) => (
-                  <TableRow key={patient.id} className="border-mint-green/20 hover:bg-mint-green/10">
-                    <TableCell className="font-medium text-indigo-dye">{patient.id}</TableCell>
-                    <TableCell className="text-indigo-dye">{patient.patient}</TableCell>
-                    <TableCell className="text-indigo-dye/80">{patient.age}</TableCell>
-                    <TableCell className="text-indigo-dye/80">{patient.contact}</TableCell>
-                    <TableCell className="text-indigo-dye">{patient.lastVisit}</TableCell>
-                    <TableCell className="text-indigo-dye">{patient.nextAppointment}</TableCell>
-                    <TableCell className="text-indigo-dye">{patient.doctor}</TableCell>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-indigo-dye">
+                      Loading patient records...
+                    </TableCell>
                   </TableRow>
-                ))}
+                ) : patientAppointments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-indigo-dye/70">
+                      No patient records available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  patientAppointments.map((patient) => (
+                    <TableRow key={patient.id} className="border-mint-green/20 hover:bg-mint-green/10">
+                      <TableCell className="font-medium text-indigo-dye">{patient.id}</TableCell>
+                      <TableCell className="text-indigo-dye">{patient.patient}</TableCell>
+                      <TableCell className="text-indigo-dye/80">{patient.age}</TableCell>
+                      <TableCell className="text-indigo-dye/80">{patient.contact}</TableCell>
+                      <TableCell className="text-indigo-dye">{patient.lastVisit}</TableCell>
+                      <TableCell className="text-indigo-dye">{patient.nextAppointment}</TableCell>
+                      <TableCell className="text-indigo-dye">{patient.doctor}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -262,24 +278,38 @@ const ReceptionistPortal = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {billingRecords.map((record) => (
-                  <TableRow key={record.id} className="border-mint-green/20 hover:bg-mint-green/10">
-                    <TableCell className="font-medium text-indigo-dye">{record.id}</TableCell>
-                    <TableCell className="text-indigo-dye">{record.patient}</TableCell>
-                    <TableCell className="text-indigo-dye">{record.doctor}</TableCell>
-                    <TableCell className="text-indigo-dye/80">{record.service}</TableCell>
-                    <TableCell className="text-indigo-dye font-semibold">{record.amount}</TableCell>
-                    <TableCell className="text-indigo-dye/80">{record.date}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(record.status)}>{record.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" className="text-picton-blue hover:text-moonstone hover:bg-mint-green/20">
-                        View
-                      </Button>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-indigo-dye">
+                      Loading billing records...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : billingRecords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-indigo-dye/70">
+                      No billing records available
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  billingRecords.map((record) => (
+                    <TableRow key={record.id} className="border-mint-green/20 hover:bg-mint-green/10">
+                      <TableCell className="font-medium text-indigo-dye">{record.id}</TableCell>
+                      <TableCell className="text-indigo-dye">{record.patient}</TableCell>
+                      <TableCell className="text-indigo-dye">{record.doctor}</TableCell>
+                      <TableCell className="text-indigo-dye/80">{record.service}</TableCell>
+                      <TableCell className="text-indigo-dye font-semibold">{record.amount}</TableCell>
+                      <TableCell className="text-indigo-dye/80">{record.date}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(record.status)}>{record.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="text-picton-blue hover:text-moonstone hover:bg-mint-green/20">
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

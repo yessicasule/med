@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,15 @@ import { Doctor } from '@/types';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
+import { doctorDB, userDB } from '@/db';
+import { appointmentsApi } from '@/api/appointments';
+import { toast } from 'sonner';
 
 const BookAppointment = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const doctorId = searchParams.get('doctorId');
-  const { searchDoctors, doctors, isLoadingDoctors, bookAppointment } = useAppointments();
+  const { searchDoctors, doctors, isLoadingDoctors, bookAppointment, isBooking } = useAppointments();
   const { currentUser } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +34,56 @@ const BookAppointment = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [appointmentType, setAppointmentType] = useState('consultation');
 
+  // Load doctor from URL parameter
+  useEffect(() => {
+    const loadDoctorFromUrl = async () => {
+      if (doctorId) {
+        try {
+          // Try to get doctor from API first
+          const doctor = await appointmentsApi.getDoctor(doctorId);
+          
+          // Map to Doctor type if needed
+          const doctorData: Doctor = {
+            id: doctor.id,
+            name: doctor.name,
+            specialty: doctor.specialty,
+            location: doctor.location,
+            rating: doctor.rating,
+            experience: doctor.experience,
+            verified: doctor.verified,
+            availableSlots: doctor.availableSlots || [],
+          };
+          
+          setSelectedDoctor(doctorData);
+        } catch (error) {
+          // Fallback to local database
+          const doctorDoc = doctorDB.getById(doctorId);
+          if (doctorDoc) {
+            const doctorUser = userDB.getById(doctorDoc.userId);
+            const doctorData: Doctor = {
+              id: doctorDoc.id,
+              name: doctorUser?.name || 'Dr. Unknown',
+              specialty: doctorDoc.specialty,
+              location: doctorDoc.location,
+              rating: doctorDoc.rating,
+              experience: doctorDoc.experience,
+              verified: doctorDoc.verificationStatus === 'verified',
+              availableSlots: doctorDoc.availabilitySlots.map(slot => ({
+                id: slot.id,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                available: slot.available,
+              })),
+            };
+            setSelectedDoctor(doctorData);
+          }
+        }
+      }
+    };
+
+    loadDoctorFromUrl();
+  }, [doctorId]);
+
   const handleSearch = () => {
     searchDoctors({
       name: searchQuery || undefined,
@@ -39,19 +92,38 @@ const BookAppointment = () => {
     });
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!selectedDoctor || !selectedDate || !selectedSlot) {
+      toast.error('Please select a date and time slot');
       return;
     }
 
-    bookAppointment({
-      doctorId: selectedDoctor.id,
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      timeSlotId: selectedSlot,
-      type: appointmentType,
-    });
+    // Get the selected slot to extract the time
+    const slot = selectedDoctor.availableSlots.find(s => s.id === selectedSlot);
+    if (!slot) {
+      toast.error('Selected time slot is no longer available');
+      return;
+    }
 
-    navigate('/patient/dashboard');
+    if (!slot.available) {
+      toast.error('This time slot is no longer available');
+      return;
+    }
+
+    try {
+      await bookAppointment({
+        doctorId: selectedDoctor.id,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        timeSlotId: selectedSlot,
+        type: appointmentType,
+      });
+      
+      // Navigation will happen after successful booking
+      navigate('/patient/dashboard');
+    } catch (error) {
+      // Error is handled by the hook, just don't navigate
+      console.error('Booking failed:', error);
+    }
   };
 
   return (
@@ -254,11 +326,11 @@ const BookAppointment = () => {
 
               <Button
                 onClick={handleBook}
-                disabled={!selectedDate || !selectedSlot}
+                disabled={!selectedDate || !selectedSlot || isBooking}
                 className="w-full"
                 size="lg"
               >
-                Book Appointment
+                {isBooking ? 'Booking...' : 'Book Appointment'}
               </Button>
             </CardContent>
           </Card>

@@ -165,6 +165,11 @@ class AppointmentDatabase {
 
     return limit ? sorted.slice(0, limit) : sorted;
   }
+
+  // Get all appointments
+  getAll(): AppointmentSchema[] {
+    return Array.from(this.appointments.values());
+  }
 }
 
 export const appointmentDB = new AppointmentDatabase();
