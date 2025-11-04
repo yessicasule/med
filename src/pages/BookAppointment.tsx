@@ -34,10 +34,22 @@ const BookAppointment = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [appointmentType, setAppointmentType] = useState('consultation');
 
+  // Debug: Log render state
+  useEffect(() => {
+    console.log('BookAppointment Render State:', {
+      doctorId,
+      selectedDoctor: selectedDoctor?.name,
+      doctorsCount: doctors.length,
+      isLoadingDoctors,
+      currentUser: currentUser?.name,
+    });
+  }, [doctorId, selectedDoctor, doctors, isLoadingDoctors, currentUser]);
+
   // Load doctor from URL parameter
   useEffect(() => {
     const loadDoctorFromUrl = async () => {
       if (doctorId) {
+        console.log('Loading doctor from URL:', doctorId);
         try {
           // Try to get doctor from API first
           const doctor = await appointmentsApi.getDoctor(doctorId);
@@ -54,8 +66,10 @@ const BookAppointment = () => {
             availableSlots: doctor.availableSlots || [],
           };
           
+          console.log('Doctor loaded from API:', doctorData);
           setSelectedDoctor(doctorData);
         } catch (error) {
+          console.log('API failed, trying local DB:', error);
           // Fallback to local database
           const doctorDoc = doctorDB.getById(doctorId);
           if (doctorDoc) {
@@ -75,7 +89,10 @@ const BookAppointment = () => {
                 available: slot.available,
               })),
             };
+            console.log('Doctor loaded from DB:', doctorData);
             setSelectedDoctor(doctorData);
+          } else {
+            console.error('Doctor not found in DB');
           }
         }
       }
@@ -85,6 +102,12 @@ const BookAppointment = () => {
   }, [doctorId]);
 
   const handleSearch = () => {
+    console.log('Searching doctors with filters:', {
+      name: searchQuery,
+      specialty: selectedSpecialty,
+      location: selectedLocation,
+    });
+    
     searchDoctors({
       name: searchQuery || undefined,
       specialty: selectedSpecialty || undefined,
@@ -126,6 +149,9 @@ const BookAppointment = () => {
     }
   };
 
+  // Debug: Check if component is rendering at all
+  console.log('BookAppointment component rendering');
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -145,6 +171,14 @@ const BookAppointment = () => {
           >
             Browse doctor specialties →
           </Button>
+        </div>
+
+        {/* Debug info - Remove in production */}
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+          <p className="text-sm font-mono">
+            Debug: doctors={doctors.length}, loading={isLoadingDoctors.toString()}, 
+            selected={selectedDoctor ? 'yes' : 'no'}
+          </p>
         </div>
 
         {!selectedDoctor ? (

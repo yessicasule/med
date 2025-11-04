@@ -16,7 +16,7 @@ import { UserSchema, AppointmentSchema } from '@/db/schemas';
  */
 export class PatientFlowService {
   // Step 1: Register/Login
-  static async registerAndLogin(email: string, password: string, userData: any) {
+  static async registerAndLogin(email: string, password: string, userData: { name: string; phone: string; role: 'patient' | 'doctor' | 'receptionist' | 'admin'; specialty?: string; verified?: boolean }) {
     // Check if user exists
     const existingUser = userDB.getByEmail(email);
     if (existingUser) {
@@ -117,7 +117,7 @@ export class DoctorFlowService {
     doctorId: string,
     patientId: string,
     appointmentId: string | undefined,
-    prescriptionData: any
+    prescriptionData: { title: string; description?: string; fileUrl?: string; fileName?: string }
   ) {
     // Create medical record
     const record = medicalRecordsDB.create({
@@ -175,7 +175,7 @@ export class ReceptionistFlowService {
     receptionistId: string,
     patientId: string,
     appointmentId: string | undefined,
-    items: Array<{ description: string; quantity: number; unitPrice: number }>
+    items: Array<BillingItem>
   ) {
     const invoice = billingDB.generateInvoice(patientId, appointmentId, items, receptionistId);
 

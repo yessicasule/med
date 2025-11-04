@@ -18,6 +18,8 @@ import Notifications from "./pages/Notifications";
 import DoctorVerification from "./pages/DoctorVerification";
 import NotFound from "./pages/NotFound";
 
+
+
 const queryClient = new QueryClient();
 
 const App = () => (

@@ -78,8 +78,11 @@ export const authApi = {
         user: userResponse,
         token,
       };
-    } catch (error: any) {
-      throw new Error(error.message || 'Registration failed');
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(error.message || 'Registration failed');
+      }
+      throw new Error('Registration failed');
     }
   },
 

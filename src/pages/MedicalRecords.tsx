@@ -85,7 +85,7 @@ const MedicalRecords = () => {
               <div className="space-y-4 py-4">
                 <div>
                   <Label>Record Type</Label>
-                  <Select value={recordType} onValueChange={(value: any) => setRecordType(value)}>
+                  <Select value={recordType} onValueChange={(value: 'prescription' | 'lab_report' | 'xray' | 'diagnosis' | 'other') => setRecordType(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

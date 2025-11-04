@@ -223,6 +223,10 @@ const PatientDashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/book-appointment')}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Book Appointment
+                </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/medical-records')}>
                   <FileText className="mr-2 h-4 w-4" />
                   View Medical Records
@@ -238,10 +242,6 @@ const PatientDashboard = () => {
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/find-doctors')}>
                   <Search className="mr-2 h-4 w-4" />
                   Find Doctors
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/book-appointment')}>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Book Appointment
                 </Button>
               </CardContent>
             </Card>

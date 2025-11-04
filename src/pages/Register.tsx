@@ -36,6 +36,7 @@ const Register = () => {
     }
 
     if (formData.name && formData.email && formData.password && formData.phone) {
+      // Use auth hook to register; the hook handles navigation on success
       register({
         name: formData.name,
         email: formData.email,

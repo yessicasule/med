@@ -3,6 +3,8 @@ import { authApi } from './auth';
 import { doctorDB, appointmentDB, userDB } from '@/db';
 import { PatientFlowService } from '@/services/flowService';
 import { notificationDB } from '@/db';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import BookAppointment from "@/pages/BookAppointment";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 

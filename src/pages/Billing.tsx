@@ -164,7 +164,7 @@ const Billing = () => {
                                 <div className="space-y-4 py-4">
                                   <div>
                                     <Label>Payment Method</Label>
-                                    <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+                                    <Select value={paymentMethod} onValueChange={(value: 'online' | 'offline' | 'cash' | 'card') => setPaymentMethod(value)}>
                                       <SelectTrigger>
                                         <SelectValue />
                                       </SelectTrigger>
