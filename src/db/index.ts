@@ -7,6 +7,8 @@ export { appointmentDB } from './appointmentDB';
 export { billingDB } from './billingDB';
 export { medicalRecordsDB } from './medicalRecordsDB';
 export { notificationDB } from './notificationDB';
+export { queueDB } from './queueDB';
+export type { QueueStatus, Token } from './queueDB';
 
 // Database initialization and utilities
 export const initializeDatabases = () => {
@@ -22,5 +24,6 @@ export const clearAllDatabases = () => {
   localStorage.removeItem('med_billing_database');
   localStorage.removeItem('med_medical_records_database');
   localStorage.removeItem('med_notification_database');
+  localStorage.removeItem('mediqueue_tokens');
   console.log('All databases cleared');
 };

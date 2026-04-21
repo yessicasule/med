@@ -243,6 +243,14 @@ const PatientDashboard = () => {
                   <Search className="mr-2 h-4 w-4" />
                   Find Doctors
                 </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/queue/book')}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Book Queue Token
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/queue/status')}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Queue Status
+                </Button>
               </CardContent>
             </Card>
           </div>

@@ -23,6 +23,12 @@ const Navbar = () => {
             <Link to="/find-doctors" className="hover:text-secondary transition-colors">
               Find Doctors
             </Link>
+            <Link to="/queue/book" className="hover:text-secondary transition-colors">
+              Queue Token
+            </Link>
+            <Link to="/queue/status" className="hover:text-secondary transition-colors">
+              Queue Status
+            </Link>
             <Link to="/about" className="hover:text-secondary transition-colors">
               About
             </Link>
@@ -62,6 +68,12 @@ const Navbar = () => {
               </Link>
               <Link to="/find-doctors" className="hover:text-secondary transition-colors py-2">
                 Find Doctors
+              </Link>
+              <Link to="/queue/book" className="hover:text-secondary transition-colors py-2">
+                Queue Token
+              </Link>
+              <Link to="/queue/status" className="hover:text-secondary transition-colors py-2">
+                Queue Status
               </Link>
               <Link to="/about" className="hover:text-secondary transition-colors py-2">
                 About

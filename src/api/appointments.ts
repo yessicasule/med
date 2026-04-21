@@ -1,10 +1,7 @@
 import { Doctor, Appointment, AppointmentSearchFilters, BookAppointmentData, TimeSlot } from '@/types';
 import { authApi } from './auth';
-import { doctorDB, appointmentDB, userDB } from '@/db';
+import { doctorDB, appointmentDB, userDB, notificationDB } from '@/db';
 import { PatientFlowService } from '@/services/flowService';
-import { notificationDB } from '@/db';
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import BookAppointment from "@/pages/BookAppointment";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -62,33 +59,41 @@ export const appointmentsApi = {
 
   // Get doctor by ID
   async getDoctor(doctorId: string): Promise<Doctor> {
-    const response = await fetch(`${API_BASE_URL}/appointments/doctors/${doctorId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${authApi.getToken()}`,
-      },
-    }).catch(() => {
-      // Demo fallback
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/doctors/${doctorId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authApi.getToken()}`,
+        },
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Doctor not found');
+    } catch {
+      // Fallback to local database
+      const doctorDoc = doctorDB.getById(doctorId);
+      if (!doctorDoc) {
+        throw new Error('Doctor not found');
+      }
+      const user = userDB.getById(doctorDoc.userId);
       return {
-        ok: true,
-        json: async () => ({
-          id: doctorId,
-          name: 'Dr. Example',
-          specialty: 'General',
-          location: 'Hospital',
-          rating: 4.5,
-          experience: '5 years',
-          verified: true,
-          availableSlots: [],
-        }),
-      } as Response;
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch doctor');
+        id: doctorDoc.id,
+        name: user?.name || 'Dr. Unknown',
+        specialty: doctorDoc.specialty,
+        location: doctorDoc.location,
+        rating: doctorDoc.rating,
+        experience: doctorDoc.experience,
+        verified: doctorDoc.verificationStatus === 'verified',
+        availableSlots: doctorDoc.availabilitySlots.map(slot => ({
+          id: slot.id,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          available: slot.available,
+        })),
+      };
     }
-
-    return await response.json();
   },
 
   // Book appointment - Uses Patient Flow

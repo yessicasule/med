@@ -17,6 +17,11 @@ import MedicalRecords from "./pages/MedicalRecords";
 import Notifications from "./pages/Notifications";
 import DoctorVerification from "./pages/DoctorVerification";
 import NotFound from "./pages/NotFound";
+import QueueBook from "./pages/patient/QueueBook";
+import QueueStatus from "./pages/patient/QueueStatus";
+import QueuePanel from "./pages/doctor/QueuePanel";
+import QueueDesk from "./pages/receptionist/QueueDesk";
+import Analytics from "./pages/admin/Analytics";
 
 
 
@@ -42,6 +47,11 @@ const App = () => (
           <Route path="/doctor-portal" element={<DoctorPortal />} />
           <Route path="/receptionist-portal" element={<ReceptionistPortal />} />
           <Route path="/admin/doctor-verification" element={<DoctorVerification />} />
+          <Route path="/queue/book" element={<QueueBook />} />
+          <Route path="/queue/status" element={<QueueStatus />} />
+          <Route path="/doctor/queue" element={<QueuePanel />} />
+          <Route path="/reception/queue" element={<QueueDesk />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

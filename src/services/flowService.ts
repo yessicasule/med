@@ -7,8 +7,10 @@ import {
   billingDB,
   medicalRecordsDB,
   notificationDB,
+  queueDB,
 } from '@/db';
 import { UserSchema, AppointmentSchema } from '@/db/schemas';
+import { queueService } from './queueService';
 
 /**
  * Patient Flow:
@@ -345,7 +347,7 @@ export class AIFlowService {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
-    
+
     const tomorrowAppointments = appointmentDB.getByDate(tomorrowStr)
       .filter(apt => apt.status === 'scheduled');
 
@@ -377,5 +379,104 @@ export class AIFlowService {
         '/billing'
       );
     });
+  }
+
+  // Queue Smart Features
+  static predictCrowdedDepartments() {
+    const all = queueDB?.getAll() || [];
+    const deptCounts: Record<string, number> = {};
+    all.forEach((t: any) => {
+      if (t.status === 'waiting') {
+        deptCounts[t.department] = (deptCounts[t.department] || 0) + 1;
+      }
+    });
+    return Object.entries(deptCounts)
+      .map(([dept, count]) => ({ department: dept, waitingCount: count }))
+      .sort((a, b) => b.waitingCount - a.waitingCount);
+  }
+
+  static recommendTimeSlots() {
+    const peak = queueService.peakHours();
+    const offPeakHours = Array.from({ length: 12 }, (_, i) => i + 8).filter(
+      h => !peak.find(p => p.hour === h)
+    );
+    return offPeakHours.slice(0, 4).map(h => `${h.toString().padStart(2, '0')}:00`);
+  }
+
+  static alertLongWaitTimes() {
+    const all = queueDB?.getAll() || [];
+    const longWait: any[] = [];
+    all.forEach((t: any) => {
+      if (t.status === 'waiting' && t.estimatedWait > 30) {
+        longWait.push({
+          tokenNumber: t.tokenNumber,
+          department: t.department,
+          waitTime: t.estimatedWait,
+        });
+      }
+    });
+    return longWait;
+  }
+}
+
+export class QueueFlowService {
+  static bookWalkInToken(patientId: string | undefined, department: string, doctorId?: string) {
+    return queueService.generateToken(patientId, department, doctorId, false);
+  }
+
+  static bookPriorityToken(patientId: string | undefined, department: string, doctorId?: string) {
+    return queueService.generateToken(patientId, department, doctorId, true);
+  }
+
+  static trackQueue(department: string) {
+    return queueService.getCurrentQueue(department);
+  }
+
+  static doctorCallNext(department: string, doctorId?: string) {
+    return queueService.callNextPatient(department, doctorId);
+  }
+
+  static completeToken(tokenId: string) {
+    return queueService.completeToken(tokenId);
+  }
+
+  static cancelToken(tokenId: string) {
+    return queueService.cancelToken(tokenId);
+  }
+
+  static pauseToken(tokenId: string) {
+    return queueService.pauseToken(tokenId);
+  }
+
+  static resumeToken(tokenId: string) {
+    return queueService.resumeToken(tokenId);
+  }
+
+  static getEstimatedWait(tokenId: string) {
+    return queueService.getEstimatedWait(tokenId);
+  }
+
+  static trackPatientQueue(patientId: string) {
+    return queueService.getPatientTokens(patientId);
+  }
+
+  static adminQueueStats() {
+    return queueService.stats();
+  }
+
+  static departmentStats() {
+    return queueService.departmentStats();
+  }
+
+  static getNextPatients(department: string, limit = 5) {
+    return queueService.getNextPatients(department, limit);
+  }
+
+  static peakHours() {
+    return queueService.peakHours();
+  }
+
+  static tokensPerDay() {
+    return queueService.tokensPerDay();
   }
 }
