@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { queueService } from '@/services/queueService';
-import { Token } from '@/db';
+import { Token } from '@/api/queue';
 
 interface LiveQueueBoardProps {
   department?: string;
@@ -11,9 +11,9 @@ export function LiveQueueBoard({ department, departments }: LiveQueueBoardProps)
   const [queues, setQueues] = useState<Record<string, { current: Token | null; next: Token | null }>>({});
 
   useEffect(() => {
-    const updateQueues = () => {
+    const updateQueues = async () => {
       if (department) {
-        const q = queueService.getCurrentQueue(department);
+        const q = await queueService.getCurrentQueue(department);
         setQueues({
           [department]: {
             current: q.find(t => t.status === 'called') || null,
@@ -23,13 +23,14 @@ export function LiveQueueBoard({ department, departments }: LiveQueueBoardProps)
       } else if (departments) {
         const newQueues: Record<string, { current: Token | null; next: Token | null }> = {};
         departments.forEach(dept => {
-          const q = queueService.getCurrentQueue(dept);
-          newQueues[dept] = {
-            current: q.find(t => t.status === 'called') || null,
-            next: q.find(t => t.status === 'waiting') || null,
-          };
+          queueService.getCurrentQueue(dept).then((q) => {
+            newQueues[dept] = {
+              current: q.find(t => t.status === 'called') || null,
+              next: q.find(t => t.status === 'waiting') || null,
+            };
+            setQueues({ ...newQueues });
+          });
         });
-        setQueues(newQueues);
       }
     };
 

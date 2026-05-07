@@ -10,8 +10,8 @@ export function WaitEstimator({ tokenId }: WaitEstimatorProps) {
   const [eta, setEta] = useState(0);
 
   useEffect(() => {
-    const updateEta = () => {
-      const wait = queueService.getEstimatedWait(tokenId);
+    const updateEta = async () => {
+      const wait = await queueService.getEstimatedWait(tokenId);
       setEta(wait);
     };
 

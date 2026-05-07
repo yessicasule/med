@@ -1,16 +1,4 @@
-import { queueDB, Token } from '../db/queueDB';
-import { notificationDB } from '../db';
-
-const prefixMap: Record<string, string> = {
-  CARDIOLOGY: 'C',
-  ENT: 'E',
-  ORTHO: 'O',
-  GENERAL: 'G',
-  DENTAL: 'D',
-  DERMATOLOGY: 'DR',
-  NEUROLOGY: 'N',
-  PEDIATRICS: 'P',
-};
+import { queueApi, Token } from '@/api/queue';
 
 export interface QueueStats {
   total: number;
@@ -30,48 +18,13 @@ export interface DepartmentStats {
 }
 
 class QueueService {
-  private nextTokenNumber(department: string): string {
-    const prefix = prefixMap[department] || department[0].toUpperCase();
-    const existing = queueDB.byDepartment(department);
-    const maxNum = existing.reduce((max, t) => {
-      const num = parseInt(t.tokenNumber.replace(prefix, ''), 10);
-      return num > max ? num : max;
-    }, 0);
-    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
+  async generateToken(patientId: string | undefined, department: string, doctorId?: string, priority = false): Promise<Token> {
+    return queueApi.createToken({ patientId, department, doctorId, priority });
   }
 
-  generateToken(patientId: string | undefined, department: string, doctorId?: string, priority = false): Token {
-    const waiting = this.getCurrentQueue(department).length;
-    const token: Token = {
-      id: `TOKEN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      tokenNumber: this.nextTokenNumber(department),
-      patientId,
-      department,
-      doctorId,
-      status: 'waiting',
-      priority,
-      createdAt: new Date().toISOString(),
-      estimatedWait: this.predictWaitTime(waiting),
-    };
-
-    const all = queueDB.getAll();
-    if (priority) {
-      const firstNonPriority = all.findIndex(t => t.status === 'waiting' && !t.priority);
-      if (firstNonPriority === -1) {
-        all.push(token);
-      } else {
-        all.splice(firstNonPriority, 0, token);
-      }
-    } else {
-      all.push(token);
-    }
-    queueDB.saveAll(all);
-    return token;
-  }
-
-  getCurrentQueue(department: string): Token[] {
-    return queueDB
-      .byDepartment(department)
+  async getCurrentQueue(department: string): Promise<Token[]> {
+    const tokens = await queueApi.getTokens({ department });
+    return tokens
       .filter(t => t.status === 'waiting' || t.status === 'called')
       .sort((a, b) => {
         if (a.priority !== b.priority) return a.priority ? -1 : 1;
@@ -79,67 +32,45 @@ class QueueService {
       });
   }
 
-  getNextPatients(department: string, limit = 5): Token[] {
-    return this.getCurrentQueue(department).slice(0, limit);
+  async getNextPatients(department: string, limit = 5): Promise<Token[]> {
+    const queue = await this.getCurrentQueue(department);
+    return queue.slice(0, limit);
   }
 
-  callNextPatient(department: string, doctorId?: string): Token | null {
-    const candidates = this.getCurrentQueue(department).filter(t => t.status === 'waiting');
-    let next: Token | undefined;
-
-    if (doctorId) {
-      next = candidates.find(t => t.doctorId === doctorId);
+  async callNextPatient(department: string, doctorId?: string): Promise<Token | null> {
+    try {
+      return await queueApi.callNext(department, doctorId);
+    } catch {
+      return null;
     }
-    if (!next) {
-      next = candidates.find(t => !t.priority);
-    }
-    if (!next) {
-      next = candidates[0];
-    }
-
-    if (!next) return null;
-    queueDB.update(next.id, { status: 'called' });
-    
-    if (next.patientId) {
-      notificationDB.send(
-        next.patientId,
-        'queue',
-        'in-app',
-        'Token Called',
-        `Your token ${next.tokenNumber} is now being called. Please proceed to ${next.department}.`,
-        next.doctorId || 'system',
-        '/queue/status'
-      );
-    }
-    
-    return next;
   }
 
-  completeToken(id: string): void {
-    queueDB.update(id, { status: 'completed' });
+  async completeToken(id: string): Promise<void> {
+    await queueApi.updateStatus(id, 'completed');
   }
 
-  cancelToken(id: string): void {
-    queueDB.update(id, { status: 'cancelled' });
+  async cancelToken(id: string): Promise<void> {
+    await queueApi.updateStatus(id, 'cancelled');
   }
 
-  pauseToken(id: string): void {
-    queueDB.update(id, { status: 'paused' });
+  async pauseToken(id: string): Promise<void> {
+    await queueApi.updateStatus(id, 'paused');
   }
 
-  resumeToken(id: string): void {
-    queueDB.update(id, { status: 'waiting' });
+  async resumeToken(id: string): Promise<void> {
+    await queueApi.updateStatus(id, 'waiting');
   }
 
   predictWaitTime(queueAhead: number, avgConsultationTime = 10): number {
     return queueAhead * avgConsultationTime;
   }
 
-  getEstimatedWait(tokenId: string): number {
-    const token = queueDB.getAll().find(t => t.id === tokenId);
+  async getEstimatedWait(tokenId: string): Promise<number> {
+    const all = await queueApi.getTokens();
+    const token = all.find(t => t.id === tokenId);
     if (!token) return 0;
 
-    const queue = this.getCurrentQueue(token.department);
+    const queue = await this.getCurrentQueue(token.department);
     const position = queue.findIndex(t => t.id === tokenId);
     if (position <= 0) return 0;
 
@@ -147,22 +78,23 @@ class QueueService {
     return tokensAhead.reduce((wait, t) => wait + this.predictWaitTime(1), 0);
   }
 
-  stats(): QueueStats {
-    const all = queueDB.getAll();
+  async stats(): Promise<QueueStats> {
+    const stats = await queueApi.getStats();
     return {
-      total: all.length,
-      completed: all.filter(x => x.status === 'completed').length,
-      waiting: all.filter(x => x.status === 'waiting').length,
-      called: all.filter(x => x.status === 'called').length,
-      cancelled: all.filter(x => x.status === 'cancelled').length,
-      paused: all.filter(x => x.status === 'paused').length,
+      total: Number(stats.total || 0),
+      completed: Number(stats.completed || 0),
+      waiting: Number(stats.waiting || 0),
+      called: Number(stats.called || 0),
+      cancelled: Number(stats.cancelled || 0),
+      paused: Number(stats.paused || 0),
     };
   }
 
-  departmentStats(): DepartmentStats[] {
-    const departments = [...new Set(queueDB.getAll().map(t => t.department))];
+  async departmentStats(): Promise<DepartmentStats[]> {
+    const all = await queueApi.getTokens();
+    const departments = [...new Set(all.map(t => t.department))];
     return departments.map(dept => {
-      const deptTokens = queueDB.byDepartment(dept);
+      const deptTokens = all.filter(t => t.department === dept);
       const waitingTokens = deptTokens.filter(t => t.status === 'waiting');
       const completedTokens = deptTokens.filter(t => t.status === 'completed');
       const avgWaitTime =
@@ -180,16 +112,17 @@ class QueueService {
     });
   }
 
-  getTokenById(id: string): Token | undefined {
-    return queueDB.getAll().find(t => t.id === id);
+  async getTokenById(id: string): Promise<Token | undefined> {
+    const all = await queueApi.getTokens();
+    return all.find(t => t.id === id);
   }
 
-  getPatientTokens(patientId: string): Token[] {
-    return queueDB.getAll().filter(t => t.patientId === patientId);
+  async getPatientTokens(patientId: string): Promise<Token[]> {
+    return queueApi.getTokens({ patientId });
   }
 
-  tokensPerDay(): Record<string, number> {
-    const all = queueDB.getAll();
+  async tokensPerDay(): Promise<Record<string, number>> {
+    const all = await queueApi.getTokens();
     const result: Record<string, number> = {};
     all.forEach(t => {
       const date = t.createdAt.split('T')[0];
@@ -198,8 +131,8 @@ class QueueService {
     return result;
   }
 
-  peakHours(): { hour: number; count: number }[] {
-    const all = queueDB.getAll();
+  async peakHours(): Promise<{ hour: number; count: number }[]> {
+    const all = await queueApi.getTokens();
     const hours: Record<number, number> = {};
     all.forEach(t => {
       const hour = new Date(t.createdAt).getHours();

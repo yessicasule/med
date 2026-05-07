@@ -12,9 +12,10 @@ export default function QueuePanel() {
   const [nextPatients, setNextPatients] = useState<any[]>([]);
   const [isPaused, setIsPaused] = useState(false);
 
-  const refreshQueue = () => {
-    const current = queueService.getCurrentQueue(department).find(t => t.status === 'called');
-    const next = queueService.getNextPatients(department, 5);
+  const refreshQueue = async () => {
+    const queue = await queueService.getCurrentQueue(department);
+    const current = queue.find(t => t.status === 'called');
+    const next = await queueService.getNextPatients(department, 5);
     setCurrentToken(current);
     setNextPatients(next.filter(t => t.id !== current?.id));
   };
@@ -25,19 +26,19 @@ export default function QueuePanel() {
     return () => clearInterval(interval);
   }, [department]);
 
-  const handleCallNext = () => {
-    const called = queueService.callNextPatient(department, user?.id);
+  const handleCallNext = async () => {
+    const called = await queueService.callNextPatient(department, user?.id);
     if (called) {
       setCurrentToken(called);
-      refreshQueue();
+      await refreshQueue();
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (currentToken) {
-      queueService.completeToken(currentToken.id);
+      await queueService.completeToken(currentToken.id);
       setCurrentToken(null);
-      refreshQueue();
+      await refreshQueue();
     }
   };
 

@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -62,7 +63,13 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@swc/jest": "^0.2.39",
     "@eslint/js": "^9.32.0",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",

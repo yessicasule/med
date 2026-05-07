@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO', 'DENTAL', 'DERMATOLOGY', 'NEUROLOGY', 'PEDIATRICS'];
+const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO'];
 
 export default function QueueStatus() {
   const { user } = useAuth();
@@ -13,8 +13,8 @@ export default function QueueStatus() {
   const [queue, setQueue] = useState<any[]>([]);
   const [myTokens, setMyTokens] = useState<any[]>([]);
 
-  const refreshQueue = () => {
-    const q = queueService.getCurrentQueue(selectedDept);
+  const refreshQueue = async () => {
+    const q = await queueService.getCurrentQueue(selectedDept);
     setQueue(q);
   };
 
@@ -26,14 +26,15 @@ export default function QueueStatus() {
 
   useEffect(() => {
     if (user?.id) {
-      const tokens = queueService.getPatientTokens(user.id);
+      queueService.getPatientTokens(user.id).then((tokens) => {
       setMyTokens(tokens);
+      });
     }
   }, [user?.id]);
 
-  const handleCancel = (tokenId: string) => {
-    queueService.cancelToken(tokenId);
-    refreshQueue();
+  const handleCancel = async (tokenId: string) => {
+    await queueService.cancelToken(tokenId);
+    await refreshQueue();
   };
 
   const getStatusBadge = (status: string) => {

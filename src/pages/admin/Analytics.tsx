@@ -11,17 +11,17 @@ export default function Analytics() {
   const [peakHours, setPeakHours] = useState<{ hour: number; count: number }[]>([]);
 
   useEffect(() => {
-    setStats(queueService.stats());
-    setDeptStats(queueService.departmentStats());
-    setTokensPerDay(queueService.tokensPerDay());
-    setPeakHours(queueService.peakHours());
+    queueService.stats().then(setStats);
+    queueService.departmentStats().then(setDeptStats);
+    queueService.tokensPerDay().then(setTokensPerDay);
+    queueService.peakHours().then(setPeakHours);
   }, []);
 
   const refresh = () => {
-    setStats(queueService.stats());
-    setDeptStats(queueService.departmentStats());
-    setTokensPerDay(queueService.tokensPerDay());
-    setPeakHours(queueService.peakHours());
+    queueService.stats().then(setStats);
+    queueService.departmentStats().then(setDeptStats);
+    queueService.tokensPerDay().then(setTokensPerDay);
+    queueService.peakHours().then(setPeakHours);
   };
 
   useEffect(() => {

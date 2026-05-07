@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO', 'DENTAL', 'DERMATOLOGY', 'NEUROLOGY', 'PEDIATRICS'];
+const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO'];
 
 export default function QueueDesk() {
   const [department, setDepartment] = useState('GENERAL');
@@ -18,21 +18,19 @@ export default function QueueDesk() {
   const [queue, setQueue] = useState<any[]>([]);
 
   useEffect(() => {
-    const stats = queueService.departmentStats();
-    setDepartmentStats(stats);
+    queueService.departmentStats().then(setDepartmentStats);
   }, []);
 
   useEffect(() => {
-    const q = queueService.getCurrentQueue(department);
-    setQueue(q);
+    queueService.getCurrentQueue(department).then(setQueue);
     const interval = setInterval(() => {
-      setQueue(queueService.getCurrentQueue(department));
+      queueService.getCurrentQueue(department).then(setQueue);
     }, 5000);
     return () => clearInterval(interval);
   }, [department]);
 
-  const handleGenerateToken = () => {
-    const token = queueService.generateToken(
+  const handleGenerateToken = async () => {
+    const token = await queueService.generateToken(
       patientName || undefined,
       department,
       undefined,
@@ -41,7 +39,7 @@ export default function QueueDesk() {
     setLastToken(token);
     setPatientName('');
     setPriority(false);
-    const stats = queueService.departmentStats();
+    const stats = await queueService.departmentStats();
     setDepartmentStats(stats);
   };
 

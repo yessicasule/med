@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { queueService } from '@/services/queueService';
-import { Token } from '@/db';
+import { Token } from '@/api/queue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,8 @@ export function DoctorQueuePanel({ department, doctorId }: DoctorQueuePanelProps
   const [nextPatients, setNextPatients] = useState<Token[]>([]);
   const [isPaused, setIsPaused] = useState(false);
 
-  const refresh = () => {
-    const q = queueService.getCurrentQueue(department);
+  const refresh = async () => {
+    const q = await queueService.getCurrentQueue(department);
     const current = q.find(t => t.status === 'called' && (!doctorId || t.doctorId === doctorId));
     const next = q.filter(t => t.status === 'waiting' && (!doctorId || t.doctorId === doctorId)).slice(0, 5);
     setCurrentToken(current || null);
@@ -29,16 +29,16 @@ export function DoctorQueuePanel({ department, doctorId }: DoctorQueuePanelProps
     return () => clearInterval(interval);
   }, [department, doctorId]);
 
-  const handleCallNext = () => {
-    const called = queueService.callNextPatient(department, doctorId);
-    if (called) refresh();
+  const handleCallNext = async () => {
+    const called = await queueService.callNextPatient(department, doctorId);
+    if (called) await refresh();
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (currentToken) {
-      queueService.completeToken(currentToken.id);
+      await queueService.completeToken(currentToken.id);
       setCurrentToken(null);
-      refresh();
+      await refresh();
     }
   };
 

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO', 'DENTAL', 'DERMATOLOGY', 'NEUROLOGY', 'PEDIATRICS'];
+const departments = ['GENERAL', 'CARDIOLOGY', 'ENT', 'ORTHO'];
 
 export default function QueueBook() {
   const { user } = useAuth();
@@ -15,10 +15,10 @@ export default function QueueBook() {
   const [token, setToken] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true);
     try {
-      const newToken = queueService.generateToken(user?.id, department);
+      const newToken = await queueService.generateToken(user?.id, department);
       setToken(newToken);
     } finally {
       setLoading(false);

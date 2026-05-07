@@ -395,8 +395,8 @@ export class AIFlowService {
       .sort((a, b) => b.waitingCount - a.waitingCount);
   }
 
-  static recommendTimeSlots() {
-    const peak = queueService.peakHours();
+  static async recommendTimeSlots() {
+    const peak = await queueService.peakHours();
     const offPeakHours = Array.from({ length: 12 }, (_, i) => i + 8).filter(
       h => !peak.find(p => p.hour === h)
     );

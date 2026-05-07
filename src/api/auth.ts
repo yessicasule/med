@@ -1,6 +1,5 @@
 import { User, RegisterData, LoginData, AuthResponse } from '@/types';
 import { userDB, doctorDB } from '@/db';
-import { PatientFlowService } from '@/services/flowService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
@@ -12,126 +11,39 @@ const USER_KEY = 'med_user_data';
 export const authApi = {
   // Register user (patient/doctor) - Uses Patient Flow
   async register(data: RegisterData): Promise<AuthResponse> {
-    // Try backend first
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-      if (response.ok) {
-        const result: AuthResponse = await response.json();
-        localStorage.setItem(TOKEN_KEY, result.token);
-        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-        return result;
-      }
-    } catch (error) {
-      // Fall through to local database
-    }
-
-    // Use local database via Patient Flow
-    try {
-      const user = await PatientFlowService.registerAndLogin(data.email, data.password, {
-        name: data.name,
-        phone: data.phone,
-        role: data.role,
-        specialty: data.specialty,
-      });
-
-      if (!user) {
-        throw new Error('Registration failed');
-      }
-
-      // Create doctor entry if role is doctor
-      if (data.role === 'doctor') {
-        doctorDB.create({
-          id: `DOC-${Date.now()}`,
-          userId: user.id,
-          specialty: data.specialty || 'General',
-          location: '',
-          experience: '',
-          rating: 0,
-          available: true,
-          verificationStatus: 'pending',
-          availabilitySlots: [],
-        });
-      }
-
-      const userResponse: User = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        specialty: user.specialty,
-        verified: user.verified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      };
-
-      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(userResponse));
-
-      return {
-        user: userResponse,
-        token,
-      };
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(error.message || 'Registration failed');
-      }
+    if (!response.ok) {
       throw new Error('Registration failed');
     }
+
+    const result: AuthResponse = await response.json();
+    localStorage.setItem(TOKEN_KEY, result.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+    return result;
   },
 
   // Login and authentication
   async login(data: LoginData): Promise<AuthResponse> {
-    // Try backend first
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
 
-      if (response.ok) {
-        const result: AuthResponse = await response.json();
-        localStorage.setItem(TOKEN_KEY, result.token);
-        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-        return result;
-      }
-    } catch (error) {
-      // Fall through to local database
-    }
-
-    // Use local database
-    const user = userDB.verifyCredentials(data.email, data.password);
-    if (!user) {
+    if (!response.ok) {
       throw new Error('Invalid email or password');
     }
 
-    const userResponse: User = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      specialty: user.specialty,
-      verified: user.verified,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    const result: AuthResponse = await response.json();
+    localStorage.setItem(TOKEN_KEY, result.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(result.user));
 
-    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(userResponse));
-
-    return {
-      user: userResponse,
-      token,
-    };
+    return result;
   },
 
   // Get current user
